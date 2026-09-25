@@ -1,4 +1,6 @@
 import {brandTemplate,type BrandTemplate} from './brand-templates';
+import {jpegDimensions} from './jpeg';
+export {jpegDimensions};
 export type JobDetails={suburb:string;service:string;mount:string;challenge:string;result:string;headline:string;style:string;brand?:BrandTemplate;graphicFeatures?:string;graphicBadge?:string};
 export type JobPhoto={source:string;rendered:string;brightness:number;contrast:number};
 export const emptyJob:JobDetails={suburb:'',service:'Starlink installation',mount:'',challenge:'',result:'',headline:'Another installation, done right.',style:'local'};
@@ -21,8 +23,4 @@ export function buildJobCaption(job:JobDetails){
  const lines=[job.style==='brief'?'A look at this installation.':`On the tools${job.suburb?' in '+job.suburb:''} with VINCONNECT.`,job.mount?'• Mount: '+job.mount:'',job.challenge?'The job\n'+job.challenge:'',job.result?'The result\n'+job.result:'','Planning your own installation? Message VINCONNECT or call 0408 559 555.','vinconnect.com.au','#VINCONNECT #'+(job.service.toLowerCase().includes('starlink')?'StarlinkInstallation':'Connectivity')+(job.suburb?' #'+job.suburb.replace(/[^a-zA-Z]/g,''):'')].filter(Boolean);
  return {title,body:lines.join('\n\n')};
 }
-export function jpegDimensions(bytes:Uint8Array):{width:number;height:number}|null {
- if(bytes[0]!==255||bytes[1]!==216)return null;
- for(let i=2;i+8<bytes.length;){if(bytes[i]!==255)return null;const marker=bytes[i+1];i+=2;if(marker===0xda||marker===0xd9)return null;if(marker===0xff){i--;continue;}const len=(bytes[i]<<8)|bytes[i+1];if(len<2||i+len>bytes.length)return null;if([0xc0,0xc1,0xc2].includes(marker))return {height:(bytes[i+3]<<8)|bytes[i+4],width:(bytes[i+5]<<8)|bytes[i+6]};i+=len;}
- return null;
-}
+

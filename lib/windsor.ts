@@ -1,5 +1,5 @@
 import {isPagePermissionRejection,PublishingPermissionError} from './publishing-errors';
-import { env } from 'cloudflare:workers';
+import { hubEnv } from './hub-env';
 import { articleDb } from './article-store';
 
 export const destinations = {
@@ -10,7 +10,7 @@ export type Channel = keyof typeof destinations;
 const encode=(b:Uint8Array)=>btoa(String.fromCharCode(...b));
 const decode=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function encryptionKey() {
-  const secret=(env as unknown as Record<string,string>).HUB_ENCRYPTION_KEY;
+  const secret=hubEnv('HUB_ENCRYPTION_KEY');
   if(!secret)throw Error('Secure storage is not configured. Contact the Hub administrator.');
   return crypto.subtle.importKey('raw',decode(secret),{name:'AES-GCM'},false,['encrypt','decrypt']);
 }

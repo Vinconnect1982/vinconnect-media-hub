@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { onNetlify, readSession } from "../lib/netlify-session";
 
 export type ChatGPTUser = {
   userId: string;
@@ -22,7 +23,12 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!userId || !email) return null;
+  if (!userId || !email) {
+    if (!onNetlify()) return null;
+    const session = readSession(requestHeaders.get("cookie"));
+    if (!session) return null;
+    return { userId: "netlify-owner", displayName: session.displayName, email: session.email, fullName: session.displayName };
+  }
 
   const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
   const fullName =
@@ -44,6 +50,7 @@ export async function requireChatGPTUser(
 ): Promise<ChatGPTUser> {
   const user = await getChatGPTUser();
   if (user) return user;
+  if (onNetlify()) redirect(`/signin?return_to=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
 
   redirect(chatGPTSignInPath(returnTo));
 }
@@ -55,6 +62,7 @@ export function chatGPTSignInPath(returnTo: string): string {
 
 export function chatGPTSignOutPath(returnTo = "/"): string {
   const safeReturnTo = safeRelativeReturnPath(returnTo);
+  if (onNetlify()) return `/signout?return_to=${encodeURIComponent(safeReturnTo)}`;
   return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 

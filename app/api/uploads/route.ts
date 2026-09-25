@@ -2,7 +2,7 @@ import {getChatGPTUser} from '../../chatgpt-auth';
 import {isOwnerEmail,isSameOrigin} from '../../../lib/article-workflow';
 import {articleDb} from '../../../lib/article-store';
 import {mediaBucket} from '../../../lib/media-store';
-import {jpegDimensions} from '../../../lib/install-content';
+import {jpegDimensions} from '../../../lib/jpeg';
 export const dynamic='force-dynamic';
 const reply=(d:unknown,s=200)=>Response.json(d,{status:s,headers:{'Cache-Control':'private, no-store'}});
 export async function POST(request:Request){
