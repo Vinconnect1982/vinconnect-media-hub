@@ -1,12 +1,10 @@
 import { mediaPassword, passwordMatches, sessionCookie } from "../../../lib/netlify-session";
+import { publicOrigin } from "../../../lib/article-workflow";
 
 export const dynamic = "force-dynamic";
 
 function siteUrl(request: Request, path: string) {
-  const forwarded = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const host = forwarded && !forwarded.includes("--") ? forwarded : request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
-  return new URL(path, host ? `${proto}://${host}` : request.url);
+  return new URL(path, publicOrigin(request.url) || request.url);
 }
 
 export async function POST(request: Request) {

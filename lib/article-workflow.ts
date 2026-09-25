@@ -6,15 +6,30 @@ export function isOwnerEmail(email: unknown): boolean {
   return typeof email === "string" && ["destefano.vince1@gmail.com", "vince@vinconnect.com.au"].includes(email.trim().toLowerCase());
 }
 
+export function publicOrigin(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (!["https:", "http:"].includes(url.protocol)) return null;
+    let host = url.hostname;
+    if (host.endsWith(".netlify.app")) {
+      const mark = host.indexOf("--");
+      if (mark >= 0) host = host.slice(mark + 2);
+    }
+    return `${url.protocol}//${host}${url.port ? `:${url.port}` : ""}`;
+  } catch {
+    return null;
+  }
+}
+
 export function isSameOrigin(requestUrl: string, origin: string | null): boolean {
   if (!origin || origin === "null") return false;
   try {
-    const request = new URL(requestUrl);
     const source = new URL(origin);
-    if (!["https:", "http:"].includes(request.protocol)) return false;
     if (source.username || source.password || source.search || source.hash) return false;
     if (source.pathname !== "/") return false;
-    return request.origin === source.origin;
+    const requestOrigin = publicOrigin(requestUrl);
+    const sourceOrigin = publicOrigin(origin);
+    return Boolean(requestOrigin && sourceOrigin && requestOrigin === sourceOrigin);
   } catch {
     return false;
   }
