@@ -19,12 +19,17 @@ const SIGN_IN_PATH = "/signin-with-chatgpt";
 const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
+function netlifyHost(requestHeaders: Headers) {
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  return onNetlify() || host.endsWith(".netlify.app") || host.endsWith(".netlify.live") || Boolean(requestHeaders.get("x-nf-request-id"));
+}
+
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) {
-    if (!onNetlify()) return null;
+    if (!netlifyHost(requestHeaders)) return null;
     const session = readSession(requestHeaders.get("cookie"));
     if (!session) return null;
     return { userId: "netlify-owner", displayName: session.displayName, email: session.email, fullName: session.displayName };
@@ -50,7 +55,8 @@ export async function requireChatGPTUser(
 ): Promise<ChatGPTUser> {
   const user = await getChatGPTUser();
   if (user) return user;
-  if (onNetlify()) redirect(`/signin?return_to=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
+  const requestHeaders = await headers();
+  if (netlifyHost(requestHeaders)) redirect(`/signin?return_to=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
 
   redirect(chatGPTSignInPath(returnTo));
 }

@@ -9,7 +9,7 @@ export function mediaPassword() {
 }
 
 export function onNetlify() {
-  return process.env.NETLIFY === "true" || process.env.MEDIA_HUB_RUNTIME === "netlify";
+  return process.env.NETLIFY === "true" || process.env.MEDIA_HUB_RUNTIME === "netlify" || process.env.SITE_NAME === "vinconnect-media";
 }
 
 function sign(payload: string) {
