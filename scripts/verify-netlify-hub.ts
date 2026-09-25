@@ -13,14 +13,25 @@ process.env.MEDIA_HUB_PASSWORD = "test-hub-password";
 
 const db = netlifyArticleDb();
 await db.batch(articleSeeds.map((article) => db.prepare("INSERT OR IGNORE INTO articles (id,title,body,category,image,status,revision,updated_at) VALUES (?,?,?,?,?,'pending',0,?)").bind(article.id, article.title, article.body, article.category, article.image, "2026-09-14T00:00:00.000Z")));
-const loaded = await db.prepare("SELECT * FROM articles ORDER BY id").all<{ id: string; title: string; revision: number }>();
+for (const id of ["vinconnect-article-01", "vinconnect-article-03"]) {
+  await db.prepare("UPDATE articles SET status='published', published_url=?, published_at=COALESCE(published_at, updated_at), approved_by=COALESCE(approved_by, 'vince@vinconnect.com.au') WHERE id=? AND status='pending' AND revision=0").bind(`/articles/${id}`, id).run();
+}
+const loaded = await db.prepare("SELECT * FROM articles ORDER BY id").all<{ id: string; title: string; revision: number; status: string }>();
 if (loaded.results.length !== 15) throw new Error(`Expected 15 seeded articles, got ${loaded.results.length}.`);
+const published = new Set(loaded.results.filter((row) => row.status === "published").map((row) => row.id));
+if (published.size !== 2 || !published.has("vinconnect-article-01") || !published.has("vinconnect-article-03")) {
+  throw new Error(`Expected the two live Sites articles to be published, got ${[...published].join(", ") || "none"}.`);
+}
+if (loaded.results.find((row) => row.id === "vinconnect-article-02")?.status !== "pending") throw new Error("Unpublished seed articles must stay pending.");
 
 const first = loaded.results[0];
 const saved = await db.prepare("UPDATE articles SET title=?,body=?,status=?,revision=revision+1,updated_at=?,approved_by=NULL,published_url=NULL,published_at=NULL WHERE id=? AND revision=?").bind("Edited title for the editor check", "Body long enough for the editor check.", "pending", new Date().toISOString(), first.id, first.revision).run();
 if (saved.meta.changes !== 1) throw new Error("Editor save did not update the article.");
 const edited = await db.prepare("SELECT title,revision FROM articles WHERE id=?").bind(first.id).first<{ title: string; revision: number }>();
 if (edited?.title !== "Edited title for the editor check" || edited.revision !== 1) throw new Error("Edited article did not persist.");
+await db.prepare("UPDATE articles SET status='published', published_url=?, published_at=COALESCE(published_at, updated_at) WHERE id=? AND status='pending' AND revision=0").bind("/articles/vinconnect-article-01", "vinconnect-article-01").run();
+const kept = await db.prepare("SELECT status,revision FROM articles WHERE id=?").bind("vinconnect-article-01").first<{ status: string; revision: number }>();
+if (kept?.status !== "pending" || kept.revision !== 1) throw new Error("A later edit was overwritten by the Sites migration.");
 
 const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x04, 0x38, 0x04, 0x38, 0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00, 0xff, 0xd9]);
 const size = jpegDimensions(jpeg);

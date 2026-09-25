@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -13,11 +12,14 @@ type SqliteDatabase = {
   close(): void;
 };
 
-const require = createRequire(import.meta.url);
+const loadSqlite = new Function("return import('node:sqlite')") as () => Promise<{ DatabaseSync: new (path: string) => SqliteDatabase }>;
 
-function sqlite() {
-  const { DatabaseSync } = require("node:sqlite") as { DatabaseSync: new (path: string) => SqliteDatabase };
-  return DatabaseSync;
+async function openDb() {
+  mkdirSync(dirname(FILE), { recursive: true });
+  const { DatabaseSync } = await loadSqlite();
+  const db = new DatabaseSync(FILE);
+  db.exec(SCHEMA);
+  return db;
 }
 
 const DIR = process.env.MEDIA_HUB_DATA_DIR || "/tmp/vinconnect-media-hub";
@@ -116,17 +118,10 @@ async function persist() {
   await store.set(DB_KEY, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 }
 
-function openDb() {
-  mkdirSync(dirname(FILE), { recursive: true });
-  const db = new (sqlite())(FILE);
-  db.exec(SCHEMA);
-  return db;
-}
-
 async function withDb<T>(work: (db: SqliteDatabase) => T, write: boolean): Promise<T> {
   const run = chain.then(async () => {
     await hydrate();
-    const db = openDb();
+    const db = await openDb();
     try {
       const result = work(db);
       db.close();

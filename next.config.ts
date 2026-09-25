@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["node:sqlite"],
   webpack: (config) => {
     config.resolve.alias["cloudflare:workers"] = path.join(root, "lib/cloudflare-workers-stub.ts");
     return config;
